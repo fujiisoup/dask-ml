@@ -196,8 +196,6 @@ def test_incremental_pca_batch_signs():
         all_components.append(ipca.components_)
 
     for i, j in zip(all_components[:-1], all_components[1:]):
-        i = i.compute()
-        j = j.compute()
         assert_almost_equal(np.sign(i), np.sign(j), decimal=6)
 
 
@@ -215,7 +213,7 @@ def test_incremental_pca_batch_values():
         all_components.append(ipca.components_)
 
     for i, j in zip(all_components[:-1], all_components[1:]):
-        assert_almost_equal(i.compute(), j.compute(), decimal=1)
+        assert_almost_equal(i, j, decimal=1)
 
 
 def test_incremental_pca_batch_rank():
