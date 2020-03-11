@@ -8,7 +8,7 @@ import numpy as np
 from scipy import sparse
 from dask import array as da
 from dask.array import linalg
-from dask import delayed
+from dask import delayed, compute
 
 from sklearn.utils import gen_batches
 from sklearn.utils.validation import check_random_state
@@ -120,7 +120,7 @@ class IncrementalPCA(PCA):
         new calls to fit, but increments across ``partial_fit`` calls.
     """
     def __init__(self, n_components=None, whiten=False, copy=True,
-                 batch_size=None, svd_solver='full', 
+                 batch_size=None, svd_solver='auto', 
                  iterated_power=0, random_state=None):
         self.n_components = n_components
         self.whiten = whiten
@@ -272,20 +272,64 @@ class IncrementalPCA(PCA):
         U, V = svd_flip(U, V)
         explained_variance = S ** 2 / (n_total_samples - 1)
         explained_variance_ratio = S ** 2 / np.sum(col_var * n_total_samples)
+        components, singular_values = V, S
 
         self.n_samples_seen_ = n_total_samples
-        self.components_ = V[:self.n_components_]
-        self.singular_values_ = S[:self.n_components_]
-        self.mean_ = col_mean
-        self.var_ = col_var
-        self.explained_variance_ = explained_variance[:self.n_components_]
-        self.explained_variance_ratio_ = \
-            explained_variance_ratio[:self.n_components_]
         if self.n_components_ < n_features:
-            self.noise_variance_ = \
-                explained_variance[self.n_components_:].mean()
+            noise_variance = \
+                da.mean(explained_variance[self.n_components_:])
         else:
-            self.noise_variance_ = 0.
+            noise_variance = 0.
+
+        try:
+            (
+                self.n_samples_,
+                self.mean_,
+                self.var_,
+                self.n_features_,
+                self.components_,
+                self.explained_variance_,
+                self.explained_variance_ratio_,
+                self.singular_values_,
+                self.noise_variance_,
+            ) = compute(
+                n_samples,
+                col_mean,
+                col_var,
+                n_features,
+                components,
+                explained_variance,
+                explained_variance_ratio,
+                singular_values,
+                noise_variance,
+            )
+        except ValueError as e:
+            if np.isnan([n_samples, n_features]).any():
+                msg = (
+                    "Computation of the SVD raised an error. It is possible "
+                    "n_components is too large. i.e., "
+                    "`n_components > np.nanmin(X.shape) = "
+                    "np.nanmin({})`\n\n"
+                    "A possible resolution to this error is to ensure that "
+                    "n_components <= min(n_samples, n_features)"
+                )
+                raise ValueError(msg.format(X.shape)) from e
+            raise e
+
+        self.components_ = self.components_[:self.n_components_]
+        self.singular_values_ = self.singular_values_[:self.n_components_]
+        self.explained_variance_ = self.explained_variance_[:self.n_components_]
+        self.explained_variance_ratio_ = \
+            self.explained_variance_ratio_[:self.n_components_]
+
+        if len(self.singular_values_) < self.n_components_:
+            self.n_components_ = len(self.singular_values_)
+            msg = (
+                "n_components={n} is larger than the number of singular values"
+                " ({s}) (note: PCA has attributes as if n_components == {s})"
+            )
+            raise ValueError(msg.format(n=self.n_components_, s=len(self.singular_values_)))
+
         return self
 
     def get_covariance(self):
@@ -306,35 +350,3 @@ class IncrementalPCA(PCA):
         cov = np.dot(components_.T * exp_var_diff, components_)
         cov += np.eye(len(cov)) * self.noise_variance_  # modify diag inplace
         return cov
-
-    def get_precision(self):
-        """Compute data precision matrix with the generative model.
-        Equals the inverse of the covariance but computed with
-        the matrix inversion lemma for efficiency.
-        Returns
-        -------
-        precision : array, shape=(n_features, n_features)
-            Estimated precision of data.
-        """
-        n_features = self.components_.shape[1]
-
-        # handle corner cases first
-        if self.n_components_ == 0:
-            return np.eye(n_features) / self.noise_variance_
-        if self.n_components_ == n_features:
-            return da.linalg.inv(self.get_covariance())
-
-        # Get precision using matrix inversion lemma
-        components_ = self.components_
-        exp_var = self.explained_variance_
-        if self.whiten:
-            components_ = components_ * np.sqrt(exp_var[:, np.newaxis])
-        exp_var_diff = np.maximum(exp_var - self.noise_variance_, 0.)
-        precision = np.dot(components_, components_.T) / self.noise_variance_
-        precision += np.eye(len(precision)) / exp_var_diff
-        precision = np.dot(components_.T,
-                            np.dot(da.linalg.inv(precision), components_))
-        precision /= -(self.noise_variance_ ** 2)
-        precision += np.eye(len(precision)) / self.noise_variance_
-
-        return precision
