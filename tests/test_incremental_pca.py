@@ -255,7 +255,7 @@ def test_incremental_pca_partial_fit():
     for i, j in zip(batch_itr[:-1], batch_itr[1:]):
         pipca.partial_fit(X[i:j, :])
     assert_almost_equal(
-        ipca.components_.compute(), pipca.components_.compute(), 
+        ipca.components_, pipca.components_, 
         decimal=3)
 
 
@@ -313,7 +313,7 @@ def test_singular_values():
                                       effective_rank=10, random_state=rng)
     X = da.from_array(X, chunks=[200, 30])
 
-    pca = PCA(n_components=10, svd_solver='full', random_state=rng).fit(X)
+    pca = PCA(n_components=10).fit(X)
     ipca = IncrementalPCA(n_components=10, batch_size=100).fit(X)
     assert_array_almost_equal(pca.singular_values_, ipca.singular_values_, 2)
 
@@ -340,7 +340,7 @@ def test_singular_values():
                                       effective_rank=3, random_state=rng)
     X = da.from_array(X, chunks=[4, 3])
 
-    pca = PCA(n_components=3, svd_solver='full', random_state=rng)
+    pca = PCA(n_components=3)
     ipca = IncrementalPCA(n_components=3, batch_size=100)
 
     X_pca = pca.fit_transform(X)

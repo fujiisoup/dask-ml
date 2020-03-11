@@ -284,9 +284,9 @@ class IncrementalPCA(PCA):
         try:
             (
                 self.n_samples_,
+                self.n_features_,
                 self.mean_,
                 self.var_,
-                self.n_features_,
                 self.components_,
                 self.explained_variance_,
                 self.explained_variance_ratio_,
@@ -294,9 +294,9 @@ class IncrementalPCA(PCA):
                 self.noise_variance_,
             ) = compute(
                 n_samples,
+                n_features,
                 col_mean,
                 col_var,
-                n_features,
                 components,
                 explained_variance,
                 explained_variance_ratio,
