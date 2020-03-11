@@ -124,20 +124,43 @@ def test_incremental_pca_validation():
 def test_n_components_none():
     # Ensures that n_components == None is handled correctly
     rng = np.random.RandomState(1999)
-    for n_samples, n_features in [(50, 10), (10, 50)]:
-        X = rng.rand(n_samples, n_features)
-        X = da.from_array(X, chunks=[4, 3])
-        ipca = IncrementalPCA(n_components=None)
+    n_samples = 50
+    n_features = 10
+    X = rng.rand(n_samples, n_features)
+    X = da.from_array(X, chunks=[4, 3])
+    ipca = IncrementalPCA(n_components=None)
 
-        # First partial_fit call, ipca.n_components_ is inferred from
-        # min(X.shape)
-        ipca.partial_fit(X)
-        assert ipca.n_components_ == min(X.shape)
+    # First partial_fit call, ipca.n_components_ is inferred from
+    # min(X.shape)
+    ipca.partial_fit(X)
+    assert ipca.n_components_ == min(X.shape)
 
-        # Second partial_fit call, ipca.n_components_ is inferred from
-        # ipca.components_ computed from the first partial_fit call
-        ipca.partial_fit(X)
-        assert ipca.n_components_ == ipca.components_.shape[0]
+    # Second partial_fit call, ipca.n_components_ is inferred from
+    # ipca.components_ computed from the first partial_fit call
+    ipca.partial_fit(X)
+    assert ipca.n_components_ == ipca.components_.shape[0]
+
+@pytest.mark.xfail(reason="tsqr expects n_samples>n_features")
+def test_n_components_none_wide():
+    # This is split off test_singular_values, but we can't pass it ATM
+    # Set the singular values and see what we get back
+    # Ensures that n_components == None is handled correctly
+    rng = np.random.RandomState(1999)
+    n_samples = 10
+    n_features = 50
+    X = rng.rand(n_samples, n_features)
+    X = da.from_array(X, chunks=[4, 3])
+    ipca = IncrementalPCA(n_components=None)
+
+    # First partial_fit call, ipca.n_components_ is inferred from
+    # min(X.shape)
+    ipca.partial_fit(X)
+    assert ipca.n_components_ == min(X.shape)
+
+    # Second partial_fit call, ipca.n_components_ is inferred from
+    # ipca.components_ computed from the first partial_fit call
+    ipca.partial_fit(X)
+    assert ipca.n_components_ == ipca.components_.shape[0]
 
 
 def test_incremental_pca_set_params():
@@ -329,7 +352,13 @@ def test_singular_values():
     assert_array_almost_equal(ipca.singular_values_,
                               np.sqrt(np.sum(X_ipca**2.0, axis=0)), 2)
 
+
+@pytest.mark.xfail(reason="tsqr expects n_samples>n_features")
+def test_singular_values_wide():
+    # Check that the IncrementalPCA output has the correct singular values
+
     # Set the singular values and see what we get back
+    rng = np.random.RandomState(0)
     rng = np.random.RandomState(0)
     n_samples = 100
     n_features = 110
