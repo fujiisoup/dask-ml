@@ -159,7 +159,8 @@ class IncrementalPCA(PCA):
         self.n_samples_seen_ = 0
         self.mean_ = 0.0
         self.var_ = 0.0
-        self.total_var_ = 0.0
+        self.squared_sum_ = 0.0
+        self.sum_ = 0.0
         self.singular_values_ = None
         self.explained_variance_ = None
         self.explained_variance_ratio_ = None
@@ -260,7 +261,8 @@ class IncrementalPCA(PCA):
             self.n_samples_seen_ = 0
             self.mean_ = 0.0
             self.var_ = 0.0
-            self.total_var_ = 0.0
+            self.squared_sum_ = 0.0
+            self.sum_ = 0.0
 
         # Update stats - they are 0 if this is the first step
         last_sample_count = np.tile(np.expand_dims(self.n_samples_seen_, 0), X.shape[1])
@@ -309,8 +311,12 @@ class IncrementalPCA(PCA):
         explained_variance = S ** 2 / (n_total_samples - 1)
         components, singular_values = V, S
 
+        squared_sum = 0.0
+        sum_ = 0.0
         if solver == "randomized":
-            total_var = (self.total_var_ * (self.n_samples_seen_-1) + X.var(ddof=0, axis=0).sum() * n_samples) / (n_total_samples - 1)
+            squared_sum = (self.squared_sum_ + da.sum(X**2))
+            sum_ = (self.sum_ + da.sum(X))
+            total_var = squared_sum / (n_total_samples - 1) - (sum_ / (n_total_samples - 1))**2
             explained_variance_ratio = explained_variance / total_var
         else:
             total_var = np.sum(col_var * n_total_samples)
@@ -335,7 +341,8 @@ class IncrementalPCA(PCA):
                 self.n_samples_,
                 self.mean_,
                 self.var_,
-                self.total_var_,
+                self.squared_sum_,
+                self.sum_,
                 self.n_features_,
                 self.components_,
                 self.explained_variance_,
@@ -346,7 +353,8 @@ class IncrementalPCA(PCA):
                 n_samples,
                 col_mean,
                 col_var,
-                total_var,
+                squared_sum,
+                sum_,
                 n_features,
                 components[: self.n_components_],
                 explained_variance[: self.n_components_],
