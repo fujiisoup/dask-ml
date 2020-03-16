@@ -311,10 +311,10 @@ class IncrementalPCA(PCA):
 
         if solver == "randomized":
             total_var = (self.total_var_ * (self.n_samples_seen_-1) + X.var(ddof=0, axis=0).sum() * n_samples) / (n_total_samples - 1)
+            explained_variance_ratio = explained_variance / total_var
         else:
-            total_var = explained_variance.sum()
-
-        explained_variance_ratio = explained_variance / total_var
+            total_var = np.sum(col_var * n_total_samples)
+            explained_variance_ratio = S ** 2 / total_var
 
         if self.n_components_ < min(n_features, n_samples):
             if solver == "randomized":
