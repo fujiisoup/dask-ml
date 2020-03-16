@@ -159,6 +159,7 @@ class IncrementalPCA(PCA):
         self.n_samples_seen_ = 0
         self.mean_ = 0.0
         self.var_ = 0.0
+        self.total_var_ = 0.0
         self.singular_values_ = None
         self.explained_variance_ = None
         self.explained_variance_ratio_ = None
@@ -259,6 +260,7 @@ class IncrementalPCA(PCA):
             self.n_samples_seen_ = 0
             self.mean_ = 0.0
             self.var_ = 0.0
+            self.total_var_ = 0.0
 
         # Update stats - they are 0 if this is the first step
         last_sample_count = np.tile(np.expand_dims(self.n_samples_seen_, 0), X.shape[1])
@@ -305,27 +307,35 @@ class IncrementalPCA(PCA):
             )
         U, V = svd_flip(U, V)
         explained_variance = S ** 2 / (n_total_samples - 1)
-        explained_variance_ratio = S ** 2 / np.sum(col_var * n_total_samples)
         components, singular_values = V, S
 
         if solver == "randomized":
-            total_var = X.var(ddof=1, axis=0).sum()
+            total_var = (self.total_var_ * self.n_samples_seen_ + X.var(ddof=0, axis=0).sum() * n_samples) / (n_total_samples - 1)
         else:
             total_var = explained_variance.sum()
 
         explained_variance_ratio = explained_variance / total_var
 
-        self.n_samples_seen_ = n_total_samples
-        if self.n_components_ < n_features:
-            noise_variance = da.mean(explained_variance[self.n_components_ :])
+        if self.n_components_ < min(n_features, n_samples):
+            if solver == "randomized":
+                noise_variance = (total_var - explained_variance.sum()) / (
+                    min(n_features, n_samples) - self.n_components_
+                )
+
+                pass
+            else:
+                noise_variance = da.mean(explained_variance[self.n_components_ :])
         else:
             noise_variance = 0.0
+
+        self.n_samples_seen_ = n_total_samples
 
         try:
             (
                 self.n_samples_,
                 self.mean_,
                 self.var_,
+                self.total_var_,
                 self.n_features_,
                 self.components_,
                 self.explained_variance_,
@@ -336,6 +346,7 @@ class IncrementalPCA(PCA):
                 n_samples,
                 col_mean,
                 col_var,
+                total_var,
                 n_features,
                 components[: self.n_components_],
                 explained_variance[: self.n_components_],
