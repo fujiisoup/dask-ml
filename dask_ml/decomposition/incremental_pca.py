@@ -310,7 +310,7 @@ class IncrementalPCA(PCA):
         components, singular_values = V, S
 
         if solver == "randomized":
-            total_var = (self.total_var_ * self.n_samples_seen_ + X.var(ddof=0, axis=0).sum() * n_samples) / (n_total_samples - 1)
+            total_var = (self.total_var_ * (self.n_samples_seen_-1) + X.var(ddof=0, axis=0).sum() * n_samples) / (n_total_samples - 1)
         else:
             total_var = explained_variance.sum()
 
