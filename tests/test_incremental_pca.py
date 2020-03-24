@@ -38,9 +38,13 @@ def test_compare_with_sklearn(svd_solver):
     np.testing.assert_allclose(
         ipca.explained_variance_ratio_, ipca_da.explained_variance_ratio_, atol=1e-13
     )
-    np.testing.assert_allclose(
-        ipca.noise_variance_, ipca_da.noise_variance_, atol=1e-13
-    )
+    if svd_solver == 'randomized':
+        # noise variance in randomized solver is probabilistic.
+        assert_almost_equal(ipca.noise_variance_, ipca_da.noise_variance_, decimal=1)
+    else:
+        np.testing.assert_allclose(
+            ipca.noise_variance_, ipca_da.noise_variance_, atol=1e-13
+        )
 
 
 @pytest.mark.parametrize("svd_solver", ["full", "auto", "randomized"])
@@ -324,7 +328,7 @@ def test_explained_variances(svd_solver):
         assert_almost_equal(
             pca.explained_variance_ratio_, ipca.explained_variance_ratio_, decimal=prec
         )
-        assert_almost_equal(pca.noise_variance_, ipca.noise_variance_, decimal=prec)
+        assert_almost_equal(pca.noise_variance_, ipca.noise_variance_, decimal=prec_noise)
 
 
 @pytest.mark.parametrize("svd_solver", ["full", "auto", "randomized"])

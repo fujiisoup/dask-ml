@@ -341,13 +341,14 @@ class IncrementalPCA(PCA):
         explained_variance = S ** 2 / (n_total_samples - 1)
         components, singular_values = V, S
 
-        total_var = np.sum(col_var) * (n_total_samples / (n_total_samples - 1))
-        explained_variance_ratio = explained_variance / total_var
+        total_var = np.sum(col_var)
+        explained_variance_ratio = explained_variance / total_var * ((n_total_samples - 1) / n_total_samples)
 
-        if self.n_components_ < min(n_features, n_total_samples):
+        actual_rank = min(n_features, n_total_samples)
+        if self.n_components_ < actual_rank:
             if solver == "randomized":
                 noise_variance = (total_var - explained_variance.sum()) / (
-                    min(n_features, n_total_samples) - self.n_components_
+                    actual_rank - self.n_components_
                 )
             else:
                 noise_variance = da.mean(explained_variance[self.n_components_ :])
