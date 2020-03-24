@@ -305,7 +305,7 @@ class IncrementalPCA(PCA):
             seed = draw_seed(random_state, np.iinfo("int32").max)
             n_power_iter = self.iterated_power
             U, S, V = linalg.svd_compressed(
-                X, self.n_components, n_power_iter=n_power_iter, seed=seed
+                X, self.n_components_, n_power_iter=n_power_iter, seed=seed
             )
         U, V = svd_flip(U, V)
         explained_variance = S ** 2 / (n_total_samples - 1)
