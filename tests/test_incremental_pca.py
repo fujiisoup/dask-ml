@@ -329,7 +329,7 @@ def test_explained_variances(svd_solver):
         assert_almost_equal(
             pca.explained_variance_ratio_, ipca.explained_variance_ratio_, decimal=prec
         )
-        assert_almost_equal(pca.noise_variance_, ipca.noise_variance_, decimal=prec_noise)
+        assert_almost_equal(pca.noise_variance_, ipca.noise_variance_, decimal=prec)
 
 
 @pytest.mark.parametrize("svd_solver", ["full", "auto", "randomized"])
