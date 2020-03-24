@@ -4,6 +4,7 @@
 #         Giorgio Patrini
 # License: BSD 3 clause
 
+import dask
 import numpy as np
 from scipy import sparse
 from dask import array as da
@@ -139,7 +140,7 @@ class IncrementalPCA(PCA):
         self.iterated_power = iterated_power
         self.random_state = random_state
 
-    def fit(self, X, y=None):
+    def _fit(self, X, y=None):
         """Fit the model with X, using minibatches of size batch_size.
 
         Parameters
@@ -190,6 +191,33 @@ class IncrementalPCA(PCA):
             self.partial_fit(X_batch, check_input=False)
 
         return self
+
+    def fit_transform(self, X, y=None):
+        """Fit the model with X and apply the dimensionality reduction on X.
+    
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            New data, where n_samples in the number of samples
+            and n_features is the number of features.
+    
+        y : Ignored
+    
+        Returns
+        -------
+        X_new : array-like, shape (n_samples, n_components)
+    
+        """
+        # X = check_array(X)
+        if not dask.is_dask_collection(X):
+            raise TypeError(_TYPE_MSG.format(type(X)))
+
+        if y is None:
+            # fit method of arity 1 (unsupervised transformation)
+            return self.fit(X).transform(X)
+        else:
+            # fit method of arity 2 (supervised transformation)
+            return self.fit(X, y).transform(X)
 
     def partial_fit(self, X, y=None, check_input=True):
         """Incremental fit with X. All of X is processed as a single batch.
