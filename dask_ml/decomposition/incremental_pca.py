@@ -342,9 +342,13 @@ class IncrementalPCA(PCA):
         squared_sum = 0.0
         sum_ = 0.0
         if solver == "randomized":
-            squared_sum = (self.squared_sum_ + da.sum(X**2))
-            sum_ = (self.sum_ + da.sum(X))
-            total_var = squared_sum / (n_total_samples - 1) - (sum_ / (n_total_samples - 1))**2
+            squared_sum = (self.squared_sum_ + da.sum(X**2, axis=0))
+            sum_ = (self.sum_ + da.sum(X, axis=0))
+            #squared_sum = (self.squared_sum_ + da.sum(X**2))
+            #sum_ = (self.sum_ + da.sum(X))
+            total_var = squared_sum / (n_total_samples - 1) - (sum_ / (n_total_samples))**2
+            total_var = total_var.sum()
+            #total_var = squared_sum / (n_total_samples - 1) - (sum_ / (n_total_samples - 1))**2
             explained_variance_ratio = explained_variance / total_var
         else:
             total_var = np.sum(col_var * n_total_samples)
