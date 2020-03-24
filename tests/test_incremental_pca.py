@@ -18,10 +18,11 @@ iris = datasets.load_iris()
 
 
 @pytest.mark.parametrize("svd_solver", ["full", "auto", "randomized"])
-def test_compare_with_sklearn(svd_solver):
+@pytest.mark.parametrize("batch_number", [3, 10])
+def test_compare_with_sklearn(svd_solver, batch_number):
     X = iris.data
     X_da = da.from_array(X, chunks=(3, -1))
-    batch_size = X.shape[0] // 3
+    batch_size = X.shape[0] // batch_number
     ipca = sd.IncrementalPCA(n_components=2, batch_size=batch_size)
     ipca.fit(X)
     ipca_da = IncrementalPCA(
